@@ -7,7 +7,7 @@ setup(
     long_description="HAR Storage is repository for automated client-side performance testing. It's built on MongoDB and Pylons.",
     author='Pavel Paulau',
     author_email='Pavel.Paulau@gmail.com',
-    url='http://harstorage.com/',
+    url='http://github.com/edx/harstorage',
     license='BSD, see LICENSE.txt for details',
     platforms=['Linux', 'Windows'],
     setup_requires=[],
@@ -28,5 +28,8 @@ setup(
 
     [paste.app_install]
     main = pylons.util:PylonsInstaller
+
+    [nose.plugins]
+    pylons = pylons.test:PylonsPlugin
     """,
 )
