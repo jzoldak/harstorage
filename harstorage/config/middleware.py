@@ -8,6 +8,7 @@ from pylons.wsgiapp import PylonsApp
 from routes.middleware import RoutesMiddleware
 
 from harstorage.config.environment import load_environment
+from harstorage.middleware.auth import AuthMiddleware
 
 
 def make_app(global_conf, full_stack=True, static_files=True, **app_conf):
@@ -24,6 +25,7 @@ def make_app(global_conf, full_stack=True, static_files=True, **app_conf):
     app = SessionMiddleware(app, config)
 
     # CUSTOM MIDDLEWARE HERE (filtered by error handling middlewares)
+    app = AuthMiddleware(app, config)
 
     if asbool(full_stack):
         # Handle Python exceptions
