@@ -35,6 +35,9 @@ beaker.session.secret = ${app_instance_secret}
 
 app_instance_uuid = ${app_instance_uuid}
 
+auth_user = foo
+auth_pswd = bar
+
 # Logging configuration
 [loggers]
 keys = root
