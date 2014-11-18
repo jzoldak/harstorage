@@ -23,7 +23,7 @@ ${header.html()}
                             <div class="title" id="step_1_head" >Set 1 &gt;</div>
                             <div class="text">Label:</div>
 
-                            <select name="step_1_label" id="step_1_label" class="slct-label">
+                            <select name="step_1_label" id="step_1_label" class="slct-label step-slct">
                                 % for label in c.labels:
                                 <option value="${label}">${label}</option>
                                 % endfor
@@ -31,20 +31,31 @@ ${header.html()}
 
                             <div class="text">Start Time:</div>
 
-                            <select name="step_1_start_ts" id="step_1_start_ts" class="slct-start" >
+                            <select name="step_1_start_ts" id="step_1_start_ts" class="slct-start step-slct" >
                             </select>
 
                             <div class="text">End Time:</div>
 
-                            <select name="step_1_end_ts" id="step_1_end_ts" class="slct-end" >
+                            <select name="step_1_end_ts" id="step_1_end_ts" class="slct-end step-slct" >
                             </select>
 
                             <input id="step_1_add" type="image" src="${h.url_for('/images/add_button.png')}"    class="image" />
                             <input id="step_1_del" type="image" src="${h.url_for('/images/remove_button.png')}" class="image" />
                         </div>
                     </div>
-
                     <div>
+                        <select multiple name="agg_types" id="agg_types" class="slct-agg-type">
+                            % for agg_type in c.agg_types:
+                            <option value="${agg_type}">${agg_type}</option>
+                            % endfor
+                        </select>
+
+                        <select multiple name="metrics" id="metrics" class="slct-metrics">
+                            % for metric in c.metrics:
+                            <option value="${metric}">${metric}</option>
+                            % endfor
+                        </select>
+
                         <input type="checkbox" class="checkbox" id="column" name="chart" value="column" checked="yes" /><span class="checkbox-text">Column Chart</span>
                         <input type="checkbox" class="checkbox" id="spline" name="chart" value="spline" /><span class="checkbox-text">Spline Chart</span>
                         <input type="checkbox" class="checkbox" name="table" value="true" checked="yes" /><span class="checkbox-text">Data Table</span><br />

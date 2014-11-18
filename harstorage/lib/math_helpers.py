@@ -1,6 +1,5 @@
 import math
 
-
 class Aggregator():
 
     """
@@ -8,23 +7,106 @@ class Aggregator():
 
     """
 
-    def __init__(self):
+    def __init__(self, metrics=None):
+        self.all_metrics = [
+            {
+                'id': "full_load_time",
+                'title': "Full Load Time (ms)",
+                'units': 'ms',
+            },
+            {
+                'id': "requests",
+                'title': "Total Requests",
+                'units': 'count',
+            },
+            {
+                'id': "total_size",
+                'title': "Total Size (kB)",
+                'units': 'kB',
+            },
+            {
+                'id': "ps_scores",
+                'title': "Page Speed Score",
+                'units': 'count',
+            },
+            {
+                'id': "onload_event",
+                'title': "onLoad Event (ms)",
+                'units': 'ms',
+            },
+            {
+                'id': "start_render_time",
+                'title': "Start Render Time (ms)",
+                'units': 'ms',
+            },
+            {
+                'id': "time_to_first_byte",
+                'title': "Time to First Byte (ms)",
+                'units': 'ms',
+            },
+            {
+                'id': "total_dns_time",
+                'title': "Total DNS Time (ms)",
+                'units': 'ms',
+            },
+            {
+                'id': "total_transfer_time",
+                'title': "Total Transfer Time (ms)",
+                'units': 'ms',
+            },
+            {
+                'id': "total_server_time",
+                'title': "Total Server Time (ms)",
+                'units': 'ms',
+            },
+            {
+                'id': "avg_connecting_time",
+                'title': "Avg. Connecting Time (ms)",
+                'units': 'ms',
+            },
+            {
+                'id': "avg_blocking_time",
+                'title': "Avg. Blocking Time (ms)",
+                'units': 'ms',
+            },
+            {
+                'id': "text_size",
+                'title': "Text Size (kB)",
+                'units': 'kB',
+            },
+            {
+                'id': "media_size",
+                'title': "Media Size (kB)",
+                'units': 'kB',
+            },
+            {
+                'id': "cache_size",
+                'title': "Cache Size (kB)",
+                'units': 'kB',
+            },
+            {
+                'id': "redirects",
+                'title': "Redirects",
+                'units': 'count',
+            },
+            {
+                'id': "bad_requests",
+                'title': "Bad Rquests",
+                'units': 'count',
+            },
+            {
+                'id': "domains",
+                'title': "Domains",
+                'units': 'count',
+            },
+        ]
 
-        self.METRICS = ("full_load_time", "requests", "total_size",
-                        "ps_scores", "onload_event", "start_render_time",
-                        "time_to_first_byte", "total_dns_time",
-                        "total_transfer_time", "total_server_time",
-                        "avg_connecting_time", "avg_blocking_time", "text_size",
-                        "media_size", "cache_size", "redirects", "bad_requests",
-                        "domains")
-
-        self.TITLES = ["Full Load Time", "Total Requests", "Total Size",
-                       "Page Speed Score", "onLoad Event", "Start Render Time",
-                       "Time to First Byte", "Total DNS Time",
-                       "Total Transfer Time", "Total Server Time",
-                       "Avg. Connecting Time", "Avg. Blocking Time",
-                       "Text Size", "Media Size", "Cache Size", "Redirects",
-                       "Bad Rquests", "Domains"]
+        self.METRICS = []
+        for m in self.all_metrics:
+            if metrics and m['id'] not in metrics:
+                continue
+            else:
+                self.METRICS.append(m)
 
         self.data = self.data_container()
 
@@ -33,7 +115,7 @@ class Aggregator():
 
         data = dict()
         for metric in self.METRICS:
-            data[metric] = list()
+            data[metric['id']] = list()
 
         data["label"] = list()
 
@@ -46,18 +128,18 @@ class Aggregator():
         self.data["label"][row_index] = label
 
         for metric in self.METRICS:
-            self.data[metric].append(row_index)
-            self.data[metric][row_index] = list()
+            self.data[metric['id']].append(row_index)
+            self.data[metric['id']][row_index] = list()
 
         for document in documents:
             for metric in self.METRICS:
-                if metric != "ps_scores":
-                    self.data[metric][row_index].append(
-                        document[metric]
+                if metric['id'] != "ps_scores":
+                    self.data[metric['id']][row_index].append(
+                        document[metric['id']]
                     )
                 else:
-                    self.data[metric][row_index].append(
-                        document[metric]["Total Score"]
+                    self.data[metric['id']][row_index].append(
+                        document[metric['id']]["Total Score"]
                     )
 
     def get_aggregated_value(self, list, agg_type, metric):
@@ -78,24 +160,24 @@ class Aggregator():
         elif agg_type == "99th Percentile":
             return self.percentile(list, 0.99)
 
-    def exclude_missing(self, points):
-        """Remove points missing in all subsets"""
+    # def exclude_missing(self, points):
+    #     """Remove points missing in all subsets"""
 
-        index_oe = self.METRICS.index("onload_event")
-        index_srt = self.METRICS.index("start_render_time")
+    #     index_oe = self.METRICS.index("onload_event")
+    #     index_srt = self.METRICS.index("start_render_time")
 
-        onload_event = points.split(";")[index_oe + 2]
-        start_render_time = points.split(";")[index_srt + 2]
+    #     onload_event = points.split(";")[index_oe + 2]
+    #     start_render_time = points.split(";")[index_srt + 2]
 
-        number_of_values = onload_event.count("#") + 1
-        broken_string = "#".join(["n/a"] * number_of_values)
+    #     number_of_values = onload_event.count("#") + 1
+    #     broken_string = "#".join(["n/a"] * number_of_values)
 
-        if onload_event == broken_string:
-            points = points.replace("onLoad Event#", "")
-        if start_render_time == broken_string:
-            points = points.replace("Start Render Time#", "")
+    #     if onload_event == broken_string:
+    #         points = points.replace("onLoad Event#", "")
+    #     if start_render_time == broken_string:
+    #         points = points.replace("Start Render Time#", "")
 
-        return points.replace(broken_string + ";", "")
+    #     return points.replace(broken_string + ";", "")
 
     def average(self, results):
         """

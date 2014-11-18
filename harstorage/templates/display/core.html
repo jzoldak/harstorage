@@ -4,7 +4,7 @@
 <%namespace name="footer"   file="/common/footer.html"/>
 <%namespace name="modules"  file="/display/modules.html"/>
 
-${dochead.html("Superposed Tests | " + c.agg_type)}
+${dochead.html("Superposed Tests | " + str(c.agg_types))}
 ${header.html()}
 <center>
     <div class="sp-display">
@@ -13,18 +13,6 @@ ${header.html()}
         % endif
     
         <p class="title">Aggregated Statistics</p>
-
-        <div class="selector">
-            <select id="metrics" class="chosen-select">
-                <option value="Average">Average</option>
-                <option value="Median">Median</option>
-                <option value="90th Percentile">90th Percentile</option>
-                <option value="95th Percentile">95th Percentile</option>
-                <option value="99th Percentile">99th Percentile</option>
-                <option value="Minimum">Minimum</option>
-                <option value="Maximum">Maximum</option>
-            </select>
-        </div>
 
         % if c.table == "true":
             ${modules.table()}
