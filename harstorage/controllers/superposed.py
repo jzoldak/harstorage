@@ -14,31 +14,67 @@ class SuperposedController(BaseController):
 
     """
 
-    def __before__(self):
-        """Define version of static content"""
+    def  __init__(self, *args, **kwargs):
+        super(SuperposedController, self).__init__(*args, **kwargs)
+        
+        # Aggregator
+        metrics = request.GET.getall('metrics')
+        self.agg_types = metrics if len(metrics) > 0 else None
 
+        agg_types = request.GET.getall('agg_types')
+        self.agg_types = agg_types if len(agg_types) > 0 else ['Average']
+
+        self.aggregator = Aggregator(metrics=metrics)
+
+        # Mongo handler
+        self.md_handler = MongoDB()
+
+    def __before__(self):
+        """
+        Define version of static content
+        """
         c.rev = config["app_conf"]["static_version"]
+    
+    @restrict("GET")
+    def get_docs(self, condition):
+        # Read data from database
+        fields =[m['id'] for m in self.aggregator.METRICS]
+        return self.md_handler.collection.find(condition, fields=fields)
 
     @restrict("GET")
     def create(self):
-        """Render form with list of labels and timestamps"""
+        """
+        Render form with list of labels and timestamps
+        """
 
-        # MongoDB handler
-        md_handler = MongoDB()
         if hasattr(c, "message"):
             return render("/error.html")
 
         # List of labels
         c.labels = list()
 
-        for label in md_handler.collection.distinct("label"):
+        for label in self.md_handler.collection.distinct("label"):
             c.labels.append(label)
+
+        c.agg_types = [
+            "Average",
+            "Median",
+            "Minimum",
+            "90th Percentile",
+            "95th Percentile",
+            "99th Percentile",
+            "Maximum",
+        ]
+
+        c.metrics = [m['id'] for m in Aggregator().all_metrics]
 
         return render("/create/core.html")
 
     @restrict("GET")
     def dates(self):
-        """Return a list of timestamps for selected label"""
+        """
+        Return a list of timestamps for selected label
+        """
 
         # Read label from GET request
         label = request.GET["label"]
@@ -57,48 +93,31 @@ class SuperposedController(BaseController):
 
     @restrict("GET")
     def display(self):
-        """Render page with column chart and data table"""
+        """
+        Render page with column chart and data table
+        """
 
-        # MongoDB handler
-        md_handler = MongoDB()
         if hasattr(c, "message"):
             return render("/error.html")
 
         # Checkbox options
         c.chart_type = request.GET.get("chart", None)
         c.table = request.GET.get("table", "false")
-        init = request.GET.get("metric", "true")
-
         c.chart = "true" if c.chart_type else "false"
 
         # Aggregation option
-        c.agg_type = request.GET.get("metric", "Average")
-
-        # Number of records
-        if c.chart == "true" and c.table == "true" and init != "true":
-            c.rowcount = len(request.GET) / 3 - 1
-        else:
-            c.rowcount = len(request.GET) / 3
+        c.agg_types = self.agg_types
 
         # Data table
-        c.headers = ["Label", "Full Load Time (ms)", "Total Requests",
-                     "Total Size (kB)", "Page Speed Score",
-                     "onLoad Event (ms)", "Start Render Time (ms)",
-                     "Time to First Byte (ms)", "Total DNS Time (ms)",
-                     "Total Transfer Time (ms)", "Total Server Time (ms)",
-                     "Avg. Connecting Time (ms)", "Avg. Blocking Time (ms)",
-                     "Text Size (kB)", "Media Size (kB)", "Cache Size (kB)",
-                     "Redirects", "Bad Rquests", "Domains"]
+        c.headers = ["Label"]
         c.metrics_table = list()
         c.metrics_table.append(list())
 
         # Chart points
         c.points = str()
 
-        # Aggregator
-        aggregator = Aggregator()
-
         # Test results from database
+        c.rowcount = len([key for key in request.GET.keys() if key.startswith('step_') and key.endswith('_label')])
         for row_index in range(c.rowcount):
             # Parameters from GET request
             label = request.GET["step_" + str(row_index + 1) + "_label"]
@@ -114,44 +133,43 @@ class SuperposedController(BaseController):
                 "label": label,
                 "timestamp": {"$gte": start_ts, "$lte": end_ts}
             }
-            documents = md_handler.collection.find(condition,
-                                                   fields=aggregator.METRICS)
+            documents = self.get_docs(condition)
 
             # Add data row to aggregator
-            aggregator.add_row(label, row_index, documents)
+            self.aggregator.add_row(label, row_index, documents)
 
         # Aggregated data per column
         column = 1
-        for metric in aggregator.METRICS:
-            c.metrics_table.append(list())
-            c.points = c.points[:-1] + ";"
-
-            for row_index in range(c.rowcount):
-                data_list = aggregator.data[metric][row_index]
-                value = aggregator.get_aggregated_value(data_list, c.agg_type,
-                                                        metric)
-
-                c.points += str(value) + "#"
-                c.metrics_table[column].append(value)
-
-            column += 1
-
-        # Names of series
         titles = str()
-        for title in aggregator.TITLES:
-            titles += title + "#"
+        for metric in sorted(self.aggregator.METRICS, key=lambda t: t['id'], reverse=True):
+            for agg_type in c.agg_types:
+                mod_title = metric['title'] + ' ({})'.format(agg_type)
+                c.headers.append(mod_title)
+                c.metrics_table.append(list())
+                c.points = c.points[:-1] + ";"
+
+                for row_index in range(c.rowcount):
+                    data_list = self.aggregator.data[metric['id']][row_index]
+                    value = self.aggregator.get_aggregated_value(data_list, agg_type,
+                                                            metric['id'])
+
+                    c.points += str(value) + "#"
+                    c.metrics_table[column].append(value)
+
+                column += 1
+                titles += mod_title + "#"
+
 
         # Final chart points
         c.points = titles[:-1] + ";" + c.points[:-1]
-        c.points = aggregator.exclude_missing(c.points)
 
         return render("/display/core.html")
 
     def histogram(self):
-        """Render chart with histograms"""
+        """
+        Render chart with histograms
+        """
 
-        # MongoDB handler
-        md_handler = MongoDB()
         if hasattr(c, "message"):
             return render("/error.html")
 
@@ -160,41 +178,26 @@ class SuperposedController(BaseController):
         c.metric = request.GET["metric"]
 
         # Metrics
-        METRICS = [("full_load_time", "Full Load Time"),
-                   ("onload_event", "onLoad Event"),
-                   ("start_render_time", "Start Render Time"),
-                   ("time_to_first_byte", "Time to First Byte"),
-                   ("total_dns_time", "Total DNS Time"),
-                   ("total_transfer_time", "Total Transfer Time"),
-                   ("total_server_time", "Total Server Time"),
-                   ("avg_connecting_time", "Avg. Connecting Time"),
-                   ("avg_blocking_time", "Avg. Blocking Time")]
-
-        time_metrics = ["full_load_time", "onload_event", "start_render_time",
-                        "time_to_first_byte"]
-
+        metrics = self.aggregator.METRICS
         c.metrics = list()
 
         # Read data from database
-        condition = {"label": c.label}
-        fields = (metric for metric, title in METRICS)
-        documents = md_handler.collection.find(condition, fields=fields)
-
+        documents = self.get_docs({"label": c.label})
         full_data = list(document for document in documents)
 
-        for metric, title in METRICS:
+        for metric in metrics:
             try:
-                data = (result[metric] for result in full_data)
+                data = (result[metric['id']] for result in full_data)
                 histogram = Histogram(data)
 
-                if metric in time_metrics:
+                if metric['unit'] == 'ms':
                     ranges = histogram.ranges(True)
                 else:
                     ranges = histogram.ranges()
 
                 frequencies = histogram.frequencies()
 
-                if metric == c.metric:
+                if metric['id'] == c.metric:
                     c.data = ""
 
                     for occ_range in ranges:
@@ -207,9 +210,9 @@ class SuperposedController(BaseController):
 
                     c.data = c.data[:-1] + ";"
 
-                    c.title = title
+                    c.title = metric['title']
 
-                c.metrics.append((metric, title))
+                c.metrics.append((metric['id'], metric['title']))
             except IndexError:
                 pass
             except TypeError:

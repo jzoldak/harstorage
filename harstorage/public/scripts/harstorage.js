@@ -980,7 +980,7 @@ HARSTORAGE.SuperposeForm = function() {
 HARSTORAGE.SuperposeForm.prototype.submit = function() {
     "use strict";
 
-    var selectors = document.getElementsByTagName("select");
+    var selectors = document.getElementsByClassName("step-slct");
 
     for (var i = 0, len = selectors.length/3; i < len; i += 1) {
         var id = 1 + i*3;
