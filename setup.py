@@ -12,6 +12,7 @@ setup(
     platforms=['Linux', 'Windows'],
     setup_requires=[],
     install_requires=[
+        'WebTest==1.3.3',
         'pylons==1.0',
         'pymongo==2.7.2',
         'webob==0.9.8',
