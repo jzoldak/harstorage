@@ -78,6 +78,32 @@ class Fixer():
                       har)
 
     @staticmethod
+    def apply_workaround_for_missing_timings(har):
+        """Add default timing data for entries with status code '-999'"""
+        
+        if har.rfind('"status": -999') > 0:
+
+            har = json.loads(har)
+            
+            default_timings = {
+              "comment": "Fixed up timing on har file upload", 
+              "receive": -999, 
+              "send": -999, 
+              "ssl": -999, 
+              "connect": -999, 
+              "dns": -999, 
+              "wait": -999, 
+              "blocked": -999,
+            }
+
+            for entry in har['log']['entries']:
+                if 'timings' not in entry.keys():
+                    entry['timings'] = default_timings
+
+            return json.dumps(har)
+        return har
+
+    @staticmethod
     def fix_har(har):
         """Choose workaround and apply it"""
 
@@ -87,6 +113,8 @@ class Fixer():
             har = Fixer().apply_workaround_for_fiddler(har)
         elif har.rfind('"name":"Charles Proxy"') > 0:
             har = Fixer().apply_workaround_for_charles(har)
+        elif har.rfind('"name": "BrowserMob Proxy"') > 0:
+            har = Fixer().apply_workaround_for_missing_timings(har)
 
         return har
 
